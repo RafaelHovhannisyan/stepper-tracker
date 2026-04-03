@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Stepper Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f0f0f;
+    --card: #1a1a1a;
+    --card-hover: #222;
+    --done: #2ecc71;
+    --done-glow: rgba(46, 204, 113, 0.25);
+    --accent: #f39c12;
+    --accent-soft: rgba(243, 156, 18, 0.15);
+    --text: #f0f0f0;
+    --text-dim: #777;
+    --text-mid: #aaa;
+    --border: #2a2a2a;
+    --w1: #e74c3c;
+    --w2: #e67e22;
+    --w3: #3498db;
+    --w4: #9b59b6;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    min-height: 100dvh;
+    -webkit-tap-highlight-color: transparent;
+    overflow-x: hidden;
+  }
+
+  .container {
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 24px 16px 100px;
+  }
+
+  /* HEADER */
+  .header {
+    text-align: center;
+    padding: 32px 0 28px;
+    position: relative;
+  }
+
+  .header::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 60px;
+    height: 3px;
+    background: var(--accent);
+    border-radius: 2px;
+  }
+
+  .header h1 {
+    font-family: 'Playfair Display', serif;
+    font-weight: 900;
+    font-size: 2rem;
+    letter-spacing: -0.5px;
+    margin-bottom: 6px;
+    background: linear-gradient(135deg, var(--text), var(--accent));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .header .subtitle {
+    font-size: 0.85rem;
+    color: var(--text-dim);
+    font-weight: 400;
+  }
+
+  /* PROGRESS OVERVIEW */
+  .progress-overview {
+    margin: 28px 0;
+    background: var(--card);
+    border-radius: 16px;
+    padding: 20px;
+    border: 1px solid var(--border);
+  }
+
+  .progress-bar-wrap {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 8px;
+  }
+
+  .progress-bar-bg {
+    flex: 1;
+    height: 8px;
+    background: var(--border);
+    border-radius: 99px;
+    overflow: hidden;
+  }
+
+  .progress-bar-fill {
+    height: 100%;
+    border-radius: 99px;
+    background: linear-gradient(90deg, var(--w1), var(--w2), var(--accent), var(--done));
+    transition: width 0.6s cubic-bezier(.22,.68,0,.98);
+  }
+
+  .progress-label {
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    font-weight: 500;
+    min-width: 42px;
+    text-align: right;
+  }
+
+  .progress-stats {
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .stat {
+    text-align: center;
+    flex: 1;
+  }
+
+  .stat-value {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--accent);
+  }
+
+  .stat-label {
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    margin-top: 2px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  /* WEEK TABS */
+  .week-tabs {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 20px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: var(--bg);
+    padding: 12px 0;
+  }
+
+  .week-tab {
+    flex: 1;
+    text-align: center;
+    padding: 10px 4px;
+    border-radius: 12px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    cursor: pointer;
+    border: 2px solid var(--border);
+    background: var(--card);
+    color: var(--text-dim);
+    transition: all 0.3s ease;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  .week-tab.active {
+    color: #fff;
+    border-color: transparent;
+  }
+
+  .week-tab[data-week="1"].active { background: var(--w1); }
+  .week-tab[data-week="2"].active { background: var(--w2); }
+  .week-tab[data-week="3"].active { background: var(--w3); }
+  .week-tab[data-week="4"].active { background: var(--w4); }
+
+  .week-tab .tab-progress {
+    font-size: 0.65rem;
+    opacity: 0.8;
+    margin-top: 2px;
+  }
+
+  /* WEEK CONTENT */
+  .week-content {
+    display: none;
+  }
+
+  .week-content.active {
+    display: block;
+    animation: fadeSlide 0.35s ease;
+  }
+
+  @keyframes fadeSlide {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .week-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+    padding: 0 4px;
+  }
+
+  .week-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.25rem;
+    font-weight: 700;
+  }
+
+  .week-badge {
+    font-size: 0.7rem;
+    padding: 4px 10px;
+    border-radius: 99px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .week-badge[data-week="1"] { background: rgba(231,76,60,0.15); color: var(--w1); }
+  .week-badge[data-week="2"] { background: rgba(230,126,34,0.15); color: var(--w2); }
+  .week-badge[data-week="3"] { background: rgba(52,152,219,0.15); color: var(--w3); }
+  .week-badge[data-week="4"] { background: rgba(155,89,182,0.15); color: var(--w4); }
+
+  /* DAY CARDS */
+  .day-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px 18px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    user-select: none;
+    -webkit-user-select: none;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .day-card::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    border-radius: 0 4px 4px 0;
+    transition: background 0.3s ease;
+  }
+
+  .day-card:active {
+    transform: scale(0.98);
+    background: var(--card-hover);
+  }
+
+  .day-card.done {
+    border-color: rgba(46, 204, 113, 0.3);
+  }
+
+  .day-card.done::before {
+    background: var(--done);
+  }
+
+  .check-circle {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 2.5px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: all 0.3s ease;
+    position: relative;
+  }
+
+  .check-circle svg {
+    width: 18px;
+    height: 18px;
+    opacity: 0;
+    transform: scale(0.5);
+    transition: all 0.3s ease;
+    stroke: #fff;
+  }
+
+  .day-card.done .check-circle {
+    background: var(--done);
+    border-color: var(--done);
+    box-shadow: 0 0 16px var(--done-glow);
+  }
+
+  .day-card.done .check-circle svg {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  .day-info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .day-label {
+    font-weight: 700;
+    font-size: 0.95rem;
+    margin-bottom: 2px;
+  }
+
+  .day-date {
+    font-size: 0.75rem;
+    color: var(--text-dim);
+  }
+
+  .day-card.done .day-label {
+    color: var(--done);
+  }
+
+  .day-duration {
+    text-align: right;
+    flex-shrink: 0;
+  }
+
+  .duration-value {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.5rem;
+    font-weight: 700;
+    line-height: 1;
+  }
+
+  .duration-unit {
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  /* RESET */
+  .reset-wrap {
+    text-align: center;
+    margin-top: 32px;
+  }
+
+  .reset-btn {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    padding: 10px 24px;
+    border-radius: 99px;
+    font-size: 0.78rem;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .reset-btn:active {
+    background: rgba(231,76,60,0.15);
+    border-color: var(--w1);
+    color: var(--w1);
+  }
+
+  /* CONFETTI */
+  .confetti-dot {
+    position: fixed;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 999;
+    animation: confettiFall 1s ease-out forwards;
+  }
+
+  @keyframes confettiFall {
+    0% { opacity: 1; transform: translateY(0) scale(1); }
+    100% { opacity: 0; transform: translateY(80px) scale(0.3); }
+  }
+
+  /* COMPLETE BANNER */
+  .complete-banner {
+    text-align: center;
+    padding: 24px;
+    margin: 20px 0;
+    border-radius: 16px;
+    background: linear-gradient(135deg, rgba(46,204,113,0.1), rgba(243,156,18,0.1));
+    border: 1px solid rgba(46,204,113,0.3);
+    display: none;
+  }
+
+  .complete-banner.show { display: block; animation: fadeSlide 0.5s ease; }
+
+  .complete-banner .emoji { font-size: 2.5rem; margin-bottom: 8px; }
+  .complete-banner .msg {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--done);
+  }
+  .complete-banner .sub {
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    margin-top: 4px;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="header">
+    <h1>Stepper Tracker</h1>
+    <div class="subtitle">4-Week Progressive Plan</div>
+  </div>
+
+  <div class="progress-overview">
+    <div class="progress-bar-wrap">
+      <div class="progress-bar-bg">
+        <div class="progress-bar-fill" id="totalProgress" style="width: 0%"></div>
+      </div>
+      <div class="progress-label" id="totalLabel">0%</div>
+    </div>
+    <div class="progress-stats">
+      <div class="stat">
+        <div class="stat-value" id="daysComplete">0</div>
+        <div class="stat-label">Days Done</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value" id="totalMinutes">0</div>
+        <div class="stat-label">Total Min</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value" id="streakCount">0</div>
+        <div class="stat-label">Streak</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="week-tabs" id="weekTabs"></div>
+
+  <div id="weekContents"></div>
+
+  <div class="complete-banner" id="completeBanner">
+    <div class="emoji">🎉</div>
+    <div class="msg">Program Complete!</div>
+    <div class="sub">You crushed all 28 days. Incredible.</div>
+  </div>
+
+  <div class="reset-wrap">
+    <button class="reset-btn" id="resetBtn" onclick="resetAll()">Reset All Progress</button>
+  </div>
+
+</div>
+
+<script>
+  // Schedule: day 1-3 → 10min, 4-6 → 15, 7-9 → 20, 10-12 → 25, 13+ → 30
+  function getDuration(dayNum) {
+    if (dayNum <= 3) return 10;
+    if (dayNum <= 6) return 15;
+    if (dayNum <= 9) return 20;
+    if (dayNum <= 12) return 25;
+    return 30;
+  }
+
+  const TOTAL_DAYS = 28;
+  const STORAGE_KEY = 'stepper_tracker_v1';
+
+  function loadState() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) return JSON.parse(raw);
+    } catch(e) {}
+    return {};
+  }
+
+  function saveState(state) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  }
+
+  function toggleDay(dayNum) {
+    const state = loadState();
+    if (state[dayNum]) {
+      delete state[dayNum];
+    } else {
+      state[dayNum] = Date.now();
+    }
+    saveState(state);
+    render();
+    if (state[dayNum]) spawnConfetti(event);
+  }
+
+  let resetPending = false;
+  let resetTimer = null;
+
+  function resetAll() {
+    const btn = document.getElementById('resetBtn');
+    if (!resetPending) {
+      resetPending = true;
+      btn.textContent = 'Tap Again to Confirm';
+      btn.style.borderColor = '#e74c3c';
+      btn.style.color = '#e74c3c';
+      resetTimer = setTimeout(() => {
+        resetPending = false;
+        btn.textContent = 'Reset All Progress';
+        btn.style.borderColor = '';
+        btn.style.color = '';
+      }, 3000);
+    } else {
+      clearTimeout(resetTimer);
+      resetPending = false;
+      try { localStorage.removeItem(STORAGE_KEY); } catch(e) {}
+      sessionStorage.setItem('activeWeek', '1');
+      btn.textContent = 'Reset All Progress';
+      btn.style.borderColor = '';
+      btn.style.color = '';
+      render();
+    }
+  }
+
+  function spawnConfetti(e) {
+    if (!e) return;
+    const colors = ['#2ecc71','#f39c12','#e74c3c','#3498db','#9b59b6','#1abc9c'];
+    const rect = e.currentTarget.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    for (let i = 0; i < 12; i++) {
+      const dot = document.createElement('div');
+      dot.className = 'confetti-dot';
+      dot.style.background = colors[Math.floor(Math.random() * colors.length)];
+      dot.style.left = (cx + (Math.random() - 0.5) * 80) + 'px';
+      dot.style.top = (cy + (Math.random() - 0.5) * 40) + 'px';
+      dot.style.width = (4 + Math.random() * 6) + 'px';
+      dot.style.height = dot.style.width;
+      document.body.appendChild(dot);
+      setTimeout(() => dot.remove(), 1000);
+    }
+  }
+
+  function render() {
+    const state = loadState();
+    const tabsEl = document.getElementById('weekTabs');
+    const contentsEl = document.getElementById('weekContents');
+
+    // Determine active week
+    let activeWeek = parseInt(sessionStorage.getItem('activeWeek') || '1');
+
+    // Build tabs
+    tabsEl.innerHTML = '';
+    for (let w = 1; w <= 4; w++) {
+      const startDay = (w - 1) * 7 + 1;
+      const endDay = w * 7;
+      let weekDone = 0;
+      for (let d = startDay; d <= endDay; d++) {
+        if (state[d]) weekDone++;
+      }
+      const tab = document.createElement('div');
+      tab.className = 'week-tab' + (w === activeWeek ? ' active' : '');
+      tab.dataset.week = w;
+      tab.innerHTML = `<div>Week ${w}</div><div class="tab-progress">${weekDone}/7</div>`;
+      tab.onclick = () => {
+        sessionStorage.setItem('activeWeek', w);
+        render();
+      };
+      tabsEl.appendChild(tab);
+    }
+
+    // Build week contents
+    contentsEl.innerHTML = '';
+    const weekColors = { 1: 'var(--w1)', 2: 'var(--w2)', 3: 'var(--w3)', 4: 'var(--w4)' };
+
+    for (let w = 1; w <= 4; w++) {
+      const weekDiv = document.createElement('div');
+      weekDiv.className = 'week-content' + (w === activeWeek ? ' active' : '');
+
+      const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+      let header = `<div class="week-header">
+        <div class="week-title">Week ${w}</div>
+        <div class="week-badge" data-week="${w}">
+          ${w === 1 ? 'Start' : w === 4 ? 'Final' : 'Level ' + w}
+        </div>
+      </div>`;
+
+      let cards = '';
+      for (let i = 0; i < 7; i++) {
+        const dayNum = (w - 1) * 7 + i + 1;
+        const dur = getDuration(dayNum);
+        const isDone = !!state[dayNum];
+
+        cards += `
+          <div class="day-card ${isDone ? 'done' : ''}" onclick="toggleDay(${dayNum})" style="${isDone ? '' : `--accent-col: ${weekColors[w]}`}">
+            <div class="check-circle">
+              <svg viewBox="0 0 24 24" fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+            </div>
+            <div class="day-info">
+              <div class="day-label">Day ${dayNum}</div>
+              <div class="day-date">${dayNames[i]}</div>
+            </div>
+            <div class="day-duration">
+              <div class="duration-value">${dur}</div>
+              <div class="duration-unit">min</div>
+            </div>
+          </div>`;
+      }
+
+      weekDiv.innerHTML = header + cards;
+      contentsEl.appendChild(weekDiv);
+    }
+
+    // Stats
+    let doneCount = 0;
+    let totalMin = 0;
+    let streak = 0;
+    let tempStreak = 0;
+
+    for (let d = 1; d <= TOTAL_DAYS; d++) {
+      if (state[d]) {
+        doneCount++;
+        totalMin += getDuration(d);
+        tempStreak++;
+        if (tempStreak > streak) streak = tempStreak;
+      } else {
+        tempStreak = 0;
+      }
+    }
+
+    const pct = Math.round((doneCount / TOTAL_DAYS) * 100);
+    document.getElementById('totalProgress').style.width = pct + '%';
+    document.getElementById('totalLabel').textContent = pct + '%';
+    document.getElementById('daysComplete').textContent = doneCount;
+    document.getElementById('totalMinutes').textContent = totalMin;
+    document.getElementById('streakCount').textContent = streak;
+
+    const banner = document.getElementById('completeBanner');
+    banner.classList.toggle('show', doneCount === TOTAL_DAYS);
+  }
+
+  render();
+</script>
+</body>
+</html>
